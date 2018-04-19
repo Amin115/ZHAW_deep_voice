@@ -9,11 +9,12 @@ np.random.seed(1337)  # for reproducibility
 
 import keras
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation
+from keras.layers import Dense, Dropout, Activation, BatchNormalization
 from keras.layers import LSTM
 from keras.layers.wrappers import Bidirectional
 from .core import data_gen as dg
 from .core import pairwise_kl_divergence as kld
+from keras.models import load_model
 
 from common.utils.paths import *
 
@@ -92,7 +93,7 @@ class bilstm_2layer_dropout(object):
         # batches_v = ((X_v.shape[0] + 128 - 1) // 128)
 
         history = model.fit_generator(train_gen, steps_per_epoch=10, epochs=self.n_10_batches,
-                                      verbose=2, callbacks=calls, validation_data=val_gen,
+                                      verbose=1, callbacks=calls, validation_data=val_gen,
                                       validation_steps=2, class_weight=None, max_q_size=10,
                                       nb_worker=1, pickle_safe=False)
         ps.save_accuracy_plot(history, self.network_name)
@@ -101,3 +102,89 @@ class bilstm_2layer_dropout(object):
         model.save(get_experiment_nets(self.network_name + ".h5"))
         # print "evaluating model"
         # da.calculate_test_acccuracies(self.network_name, self.test_data, True, True, True, segment_size=self.segment_size)
+
+
+"""
+    This class applies transfer learning to a Bidirectional LSTM (Gerber and Glinski).
+    First of all the class loads the checkpoint of a trained model, to get the corresponding weights.
+    Afterwards it trains the model to the new training data 
+"""
+
+
+class bilstm_2layer_dropout_transfer_learning:
+    def __init__(self, name, training_data, checkpoint_name, n_classes=20, n_10_batches=1000):
+        self.network_name = name
+        self.training_data = training_data
+        self.checkpoint_name = checkpoint_name
+        self.n_10_batches = n_10_batches
+        self.n_classes = n_classes
+
+        print(self.network_name)
+        self.run_network()
+
+    def create_net(self):
+        custom_objects = {'pairwise_kl_divergence': kld.pairwise_kl_divergence}
+        pretrained_model = load_model(self.checkpoint_name, custom_objects=custom_objects, compile=False)
+
+        model = Sequential()
+        model.add(Bidirectional(LSTM(256, return_sequences=True),
+                                input_shape=(int(pretrained_model.input.shape[1]), int(pretrained_model.input.shape[2])),
+                                weights=pretrained_model.layers[0].get_weights()))
+        model.add(Dropout(0.50))
+        model.add(Bidirectional(LSTM(256), weights=pretrained_model.layers[2].get_weights()))
+        model.add(Dense(self.n_classes * 10))
+        model.add(Dropout(0.25))
+        model.add(Dense(self.n_classes * 5))
+        model.add(Dense(self.n_classes))
+        model.add(Activation('softmax'))
+
+        model.summary()
+
+        adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+        model.compile(loss=kld.pairwise_kl_divergence,
+                      optimizer=adam, metrics=['accuracy', 'categorical_accuracy'])
+
+        return model
+
+    def create_train_data(self):
+        with open(get_speaker_pickle(self.training_data), 'rb') as f:
+            (X, y, speaker_names) = pickle.load(f)
+
+        splitter = sts.SpeakerTrainSplit(0.2, 15)
+        X_t, X_v, y_t, y_v = splitter(X, y)
+
+        return X_t, y_t, X_v, y_v
+
+    def create_callbacks(self):
+        csv_logger = keras.callbacks.CSVLogger(get_experiment_logs(self.network_name + '.csv'))
+
+        net_saver = keras.callbacks.ModelCheckpoint(
+            get_experiment_nets(self.network_name + "_best.h5"),
+            monitor='val_loss', verbose=1, save_best_only=True)
+
+        net_checkpoint = keras.callbacks.ModelCheckpoint(
+            get_experiment_nets(self.network_name + "_{epoch:05d}.h5"), period=100)
+
+        return [csv_logger, net_saver, net_checkpoint]
+
+    def run_network(self):
+        model = self.create_net()
+        calls = self.create_callbacks()
+
+        # use the same segment size as trained model
+        segment_size = int(model.input.shape[1])
+
+        X_t, y_t, X_v, y_v = self.create_train_data()
+        train_gen = dg.batch_generator_lstm(X_t, y_t, 100, segment_size=segment_size)
+        val_gen = dg.batch_generator_lstm(X_v, y_v, 100, segment_size=segment_size)
+
+        history = model.fit_generator(train_gen, steps_per_epoch=10, epochs=self.n_10_batches,
+                                      verbose=1, callbacks=calls, validation_data=val_gen,
+                                      validation_steps=2, class_weight=None, max_q_size=10,
+                                      nb_worker=1, pickle_safe=False)
+
+        ps.save_accuracy_plot(history, self.network_name)
+        ps.save_loss_plot(history, self.network_name)
+
+        print("saving model")
+        model.save(get_experiment_nets(self.network_name + ".h5"))

@@ -11,19 +11,39 @@ from common.network_controller import NetworkController
 from common.utils.logger import *
 from common.utils.paths import *
 from common.utils.pickler import load
-from .bilstm_2layer_dropout_plus_2dense import bilstm_2layer_dropout
+from .bilstm_2layer_dropout_plus_2dense import bilstm_2layer_dropout, bilstm_2layer_dropout_transfer_learning
 from .core.data_gen import generate_test_data
 from .core.pairwise_kl_divergence import pairwise_kl_divergence
 
 
 class LSTMController(NetworkController):
-    def __init__(self):
-        super().__init__("pairwise_lstm")
-        self.network_file = self.name + "_100"
+    def __init__(self, use_transfer_learning):
+        self.use_transfer_learning = use_transfer_learning
+
+        if not self.use_transfer_learning:
+            super().__init__("pairwise_lstm")
+            self.network_file = self.name + "_100"
+        else:
+            super().__init__("pairwise_lstm_transfer")
+            self.network_file = self.name
 
     def train_network(self):
-        bilstm_2layer_dropout(self.network_file, 'speakers_100_50w_50m_not_reynolds_cluster',
-                              n_hidden1=256, n_hidden2=256, n_classes=100, segment_size=50)
+        if self.use_transfer_learning:
+            best_checkpoint_file = list_all_files(get_experiment_nets(), "*pairwise_lstm*_best.h5")
+
+            if len(best_checkpoint_file) == 0:
+                raise Exception("no best checkpoint file found to use for transfer learning")
+
+            bilstm_2layer_dropout_transfer_learning(self.network_file,
+                                                    training_data="speakers_rt09_speaker_diarization_cluster",
+                                                    checkpoint_name=get_experiment_nets(best_checkpoint_file[0]),
+                                                    n_classes=50)
+
+            #bilstm_2layer_dropout(self.network_file, 'speakers_rt09_speaker_diarization_cluster',
+            #                      n_hidden1=256, n_hidden2=256, n_classes=20, segment_size=50)
+        else:
+            bilstm_2layer_dropout(self.network_file, 'speakers_100_50w_50m_not_reynolds_cluster',
+                                  n_hidden1=256, n_hidden2=256, n_classes=100, segment_size=50)
 
     def get_embeddings(self):
         logger = get_logger('lstm', logging.INFO)
@@ -37,6 +57,7 @@ class LSTMController(NetworkController):
         set_of_embeddings = []
         set_of_speakers = []
         speaker_numbers = []
+
         checkpoints = list_all_files(get_experiment_nets(), "*pairwise_lstm*.h5")
 
         # Values out of the loop
