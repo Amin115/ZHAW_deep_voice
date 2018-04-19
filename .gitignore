@@ -4,14 +4,32 @@
 
 #################### Python ####################
 # Byte-compiled / optimized / DLL files
-*/__pycache__/
+__pycache__/
 
 #################### TIMIT ####################
 # Because this is a payed product, we can't upload it to life github
-TIMIT/crp/
-TIMIT/DOC/
-TIMIT/TEST/
-TIMIT/TRAIN/
+common/data/training/TIMIT/crp/
+common/data/training/TIMIT/DOC/
+common/data/training/TIMIT/TEST/
+common/data/training/TIMIT/TRAIN/
+
+#################### RT-09 ####################
+common/data/training/RT09/TRAIN/*
+!common/data/training/RT09/TRAIN/.gitkeep
+
+common/data/training/speaker_pickles/*
+!common/data/training/speaker_pickles/.gitkeep
+
+#################### EXPERIMENTS ####################
+common/data/experiments/logs/*
+!common/data/experiments/logs/.gitkeep
+common/data/experiments/nets/*
+!common/data/experiments/nets/.gitkeep
+common/data/experiments/plots/*
+!common/data/experiments/plots/.gitkeep
+common/data/experiments/results/*
+!common/data/experiments/results/.gitkeep
+
 
 #################### Misc ####################
 # Home made stuff not present in the gitignore project.
