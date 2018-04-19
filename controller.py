@@ -93,11 +93,13 @@ class Controller(NetworkController):
     def generate_controllers(self):
 
         controller_dict = {
-            'pairwise_lstm': [LSTMController()],
+            'pairwise_lstm_transfer': [LSTMController(use_transfer_learning=True)],
+            'pairwise_lstm': [LSTMController(use_transfer_learning=False)],
             'pairwise_kldiv': [KLDivController()],
             'flow_me': [MEController(self.clear, self.debug, False)],
             'luvo': [LuvoController()],
-            'all': [LSTMController(), KLDivController(), MEController(self.clear, self.debug, False), LuvoController()]
+            'all': [LSTMController(use_transfer_learning=True), LSTMController(use_transfer_learning=False),
+                    KLDivController(), MEController(self.clear, self.debug, False), LuvoController()]
         }
 
         try:
