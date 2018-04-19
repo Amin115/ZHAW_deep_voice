@@ -74,13 +74,36 @@ class Speaker:
         y: the filled testing data in a list of speaker_numbers
         speaker_names: the names associated with the numbers
         """
-        x = np.zeros((self.max_speakers * 20, 1, self.frequency_elements, self.max_audio_length), dtype=np.float32)
-        y = np.zeros(self.max_speakers * 20, dtype=np.int32)
-
         if self.dataset == "timit":
+            x = np.zeros((self.max_speakers * 20, 1, self.frequency_elements, self.max_audio_length), dtype=np.float32)
+            y = np.zeros(self.max_speakers * 20, dtype=np.int32)
+
             return self.extract_timit(x, y)
+        elif self.dataset == "rt09":
+            x = np.zeros((self.max_speakers * self.sentences, 1, self.frequency_elements, self.max_audio_length), dtype=np.float32)
+            y = np.zeros(self.max_speakers * self.sentences, dtype=np.int32)
+
+            return self.extract_rt09(x, y)
         else:
             raise ValueError("self.dataset can currently only be 'timit', was " + self.dataset + ".")
+
+    def extract_rt09(self, x, y):
+        """
+        Extracts the training data from the speaker list of the RT-09 dataset
+        :return:
+        x: the filled training data in the 4D array [Speaker, Channel, Frequency, Time]
+        y: the filled testing data in a list of speaker_numbers
+        speaker_names: the names associated with the numbers
+        """
+        valid_speakers = []
+        with open(get_speaker_list(self.speaker_list), 'r') as f:
+            valid_speakers.extend(map(lambda line: line.rstrip(), f.readlines()))
+
+        # Prepare SpectrogramExtractor
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("RT09"), valid_speakers)
+
+        # Extract the spectrogram's, speaker numbers and speaker names
+        return extractor.extract_speaker_data_n(x, y, self.sentences)
 
     def extract_timit(self, x, y):
         """

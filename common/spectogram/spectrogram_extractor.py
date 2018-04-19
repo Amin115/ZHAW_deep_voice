@@ -5,6 +5,7 @@ correspond with the valid speakers and extracts the spectrogram's of those files
 Based on previous work of Gerber, Lukic and Vogt.
 """
 import os
+from collections import defaultdict
 
 import common.spectogram.spectrogram_converter as spectrogram_converter
 
@@ -34,7 +35,7 @@ class SpectrogramExtractor:
         for root, directories, filenames in os.walk(self.base_folder):
 
             # Ignore crp and DOC folder
-            if root[-5:] not in self.valid_speakers:
+            if os.path.split(root)[1] not in self.valid_speakers:
                 continue
 
             # Check files
@@ -45,7 +46,7 @@ class SpectrogramExtractor:
                     continue
 
                 # Extract speaker
-                speaker = root[-5:]
+                speaker = os.path.split(root)[1]
                 if speaker != old_speaker:
                     curr_speaker_num += 1
                     old_speaker = speaker
@@ -55,6 +56,39 @@ class SpectrogramExtractor:
                 if curr_speaker_num < self.max_speakers:
                     full_path = os.path.join(root, filename)
                     global_idx += extract_mel_spectrogram(full_path, X, y, global_idx, curr_speaker_num)
+
+        return X[0:global_idx], y[0:global_idx], speaker_names
+
+    def extract_speaker_data_n(self, X, y, max_files_per_speaker):
+        speaker_names = []
+        global_idx = 0
+        curr_speaker_num = -1
+        old_speaker = ''
+
+        gen_spectrogram_per_speaker = defaultdict(int)
+
+        # Crawl the base and all sub folders
+        for root, directories, filenames in os.walk(self.base_folder):
+
+            # Ignore crp and DOC folder
+            if os.path.split(root)[1] not in self.valid_speakers:
+                continue
+
+            # Check files
+            for filename in [filename for filename in filenames if '_RIFF.WAV' in filename]:
+
+                # Extract speaker
+                speaker = os.path.split(root)[1]
+                if speaker != old_speaker:
+                    curr_speaker_num += 1
+                    old_speaker = speaker
+                    speaker_names.append(speaker)
+                    print('Extraction progress: %d/%d' % (curr_speaker_num + 1, self.max_speakers))
+
+                if curr_speaker_num < self.max_speakers and gen_spectrogram_per_speaker[speaker] < max_files_per_speaker:
+                    full_path = os.path.join(root, filename)
+                    global_idx += extract_mel_spectrogram(full_path, X, y, global_idx, curr_speaker_num)
+                    gen_spectrogram_per_speaker[speaker] += 1
 
         return X[0:global_idx], y[0:global_idx], speaker_names
 
