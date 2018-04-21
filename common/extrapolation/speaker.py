@@ -85,7 +85,7 @@ class Speaker:
 
             return self.extract_rt09(x, y)
         elif self.dataset == "voxceleb":
-            x = np.zeros((self.max_speakers * self.sentences, 1, self.frequency_elements, self.max_audio_length),
+            x = np.zeros((self.max_speakers * self.sentences, 1, self.frequency_elements, self.max_audio_length + 1),
                          dtype=np.float32)
             y = np.zeros(self.max_speakers * self.sentences, dtype=np.int32)
 
@@ -95,7 +95,8 @@ class Speaker:
 
     def extract_voxceleb(self, x, y):
         # Prepare SpectrogramExtractor
-        extractor = SpectrogramExtractor(self.max_speakers, get_training("VoxCelebV1"), [], "_\d{7}\.wav$")
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("VoxCelebV1"), [], "_\d{7}\.wav$",
+                                         self.max_audio_length)
 
         # Extract the spectrogram's, speaker numbers and speaker names
         return extractor.extract_speaker_data_n(x, y, self.sentences)
