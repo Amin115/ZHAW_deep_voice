@@ -11,6 +11,8 @@ def create_all_speakers():
     A generator that yields all Speakers that are needed for the Speaker Clustering Suite to function
     :return: yields Speakers
     """
+    #yield Speaker(False, 1251, 'speakers_voxceleb_speaker_diarization', dataset='voxceleb',
+    #              max_audio_length=800, sentences=45)
     yield Speaker(False, 19, 'speakers_rt09_speaker_diarization', dataset="rt09", max_audio_length=881, sentences=15)
     #yield Speaker(False, 40, 'speakers_40_clustering_vs_reynolds')
     #yield Speaker(False, 100, 'speakers_100_50w_50m_not_reynolds')

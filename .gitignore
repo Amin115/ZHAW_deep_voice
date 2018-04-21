@@ -17,6 +17,10 @@ common/data/training/TIMIT/TRAIN/
 common/data/training/RT09/TRAIN/*
 !common/data/training/RT09/TRAIN/.gitkeep
 
+#################### VoxCeleb ####################
+common/data/training/VoxCelebV1/TRAIN/*
+common/data/training/VoxCelebV1/TRAIN/.gitkeep
+
 common/data/training/speaker_pickles/*
 !common/data/training/speaker_pickles/.gitkeep
 

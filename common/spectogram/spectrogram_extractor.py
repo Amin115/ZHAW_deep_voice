@@ -5,16 +5,19 @@ correspond with the valid speakers and extracts the spectrogram's of those files
 Based on previous work of Gerber, Lukic and Vogt.
 """
 import os
+import re
 from collections import defaultdict
 
 import common.spectogram.spectrogram_converter as spectrogram_converter
 
 
 class SpectrogramExtractor:
-    def __init__(self, max_speakers, base_folder, valid_speakers):
+    def __init__(self, max_speakers, base_folder, valid_speakers, file_match_pattern, max_audio_length=None):
         self.max_speakers = max_speakers
         self.base_folder = base_folder
         self.valid_speakers = valid_speakers
+        self.file_match_regex = re.compile(file_match_pattern)
+        self.max_audio_length = float(max_audio_length) / 100.0  #convert to seconds for librosa
 
     def extract_speaker_data(self, X, y):
 
@@ -33,18 +36,12 @@ class SpectrogramExtractor:
 
         # Crawl the base and all sub folders
         for root, directories, filenames in os.walk(self.base_folder):
-
             # Ignore crp and DOC folder
-            if os.path.split(root)[1] not in self.valid_speakers:
+            if self.valid_speakers and os.path.split(root)[1] not in self.valid_speakers:
                 continue
 
             # Check files
-            for filename in filenames:
-
-                # Can't read the other wav files
-                if '_RIFF.WAV' not in filename:
-                    continue
-
+            for filename in [filename for filename in filenames if self.file_match_regex.search(filename)]:
                 # Extract speaker
                 speaker = os.path.split(root)[1]
                 if speaker != old_speaker:
@@ -71,11 +68,11 @@ class SpectrogramExtractor:
         for root, directories, filenames in os.walk(self.base_folder):
 
             # Ignore crp and DOC folder
-            if os.path.split(root)[1] not in self.valid_speakers:
+            if self.valid_speakers and os.path.split(root)[1] not in self.valid_speakers:
                 continue
 
             # Check files
-            for filename in [filename for filename in filenames if '_RIFF.WAV' in filename]:
+            for filename in [filename for filename in filenames if self.file_match_regex.search(filename)]:
 
                 # Extract speaker
                 speaker = os.path.split(root)[1]
@@ -87,13 +84,14 @@ class SpectrogramExtractor:
 
                 if curr_speaker_num < self.max_speakers and gen_spectrogram_per_speaker[speaker] < max_files_per_speaker:
                     full_path = os.path.join(root, filename)
-                    global_idx += extract_mel_spectrogram(full_path, X, y, global_idx, curr_speaker_num)
+                    global_idx += extract_mel_spectrogram(full_path, X, y, global_idx, curr_speaker_num,
+                                                          max_duration=self.max_audio_length)
                     gen_spectrogram_per_speaker[speaker] += 1
 
         return X[0:global_idx], y[0:global_idx], speaker_names
 
 
-def extract_mel_spectrogram(wav_path, X, y, index, curr_speaker_num):
+def extract_mel_spectrogram(wav_path, X, y, index, curr_speaker_num, max_duration=None):
     """
     Extracts the mel spectrogram into the X array and saves the speaker into y.
 
@@ -102,9 +100,10 @@ def extract_mel_spectrogram(wav_path, X, y, index, curr_speaker_num):
     :param y: return Array that saves the speaker numbers
     :param index: the index in X and y this is stored in
     :param curr_speaker_num: the speaker number of the current speaker
+    :param max_duration: only load up to this much audio (in seconds)
     :return: a one (1) to increase the index
     """
-    Sxx = spectrogram_converter.mel_spectrogram(wav_path)
+    Sxx = spectrogram_converter.mel_spectrogram(wav_path, max_duration)
     for i in range(Sxx.shape[0]):
         for j in range(Sxx.shape[1]):
             X[index, 0, i, j] = Sxx[i, j]

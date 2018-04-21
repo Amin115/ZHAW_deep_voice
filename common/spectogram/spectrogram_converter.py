@@ -33,9 +33,9 @@ def spectrogram(wav_file):
     return Sxx
 
 
-def mel_spectrogram(wav_file):
+def mel_spectrogram(wav_file, max_duration=None):
     # Read out audio range and sample rate of wav file
-    audio_range, sample_rate = librosa.load(path=wav_file, sr=None)
+    audio_range, sample_rate = librosa.load(path=wav_file, sr=None, duration=max_duration)
     nperseg = int(10 * sample_rate / 1000)
 
     # NOTE: nperseg MUST be an int before handing it over to liberosa's function

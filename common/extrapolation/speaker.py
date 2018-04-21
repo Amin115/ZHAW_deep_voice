@@ -84,8 +84,21 @@ class Speaker:
             y = np.zeros(self.max_speakers * self.sentences, dtype=np.int32)
 
             return self.extract_rt09(x, y)
+        elif self.dataset == "voxceleb":
+            x = np.zeros((self.max_speakers * self.sentences, 1, self.frequency_elements, self.max_audio_length),
+                         dtype=np.float32)
+            y = np.zeros(self.max_speakers * self.sentences, dtype=np.int32)
+
+            self.extract_voxceleb(x, y)
         else:
-            raise ValueError("self.dataset can currently only be 'timit', was " + self.dataset + ".")
+            raise ValueError("self.dataset can currently only be 'timit, 'rt09' or 'voxceleb', was " + self.dataset + ".")
+
+    def extract_voxceleb(self, x, y):
+        # Prepare SpectrogramExtractor
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("VoxCelebV1"), [], "_\d{7}\.wav$")
+
+        # Extract the spectrogram's, speaker numbers and speaker names
+        return extractor.extract_speaker_data_n(x, y, self.sentences)
 
     def extract_rt09(self, x, y):
         """
@@ -100,7 +113,8 @@ class Speaker:
             valid_speakers.extend(map(lambda line: line.rstrip(), f.readlines()))
 
         # Prepare SpectrogramExtractor
-        extractor = SpectrogramExtractor(self.max_speakers, get_training("RT09"), valid_speakers)
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("RT09"), valid_speakers,
+                                         "_RIFF\.WAV$", self.max_audio_length)
 
         # Extract the spectrogram's, speaker numbers and speaker names
         return extractor.extract_speaker_data_n(x, y, self.sentences)
@@ -121,7 +135,7 @@ class Speaker:
                 valid_speakers.append(bytes.decode(line.rstrip()))
 
         # Prepare SpectrogramExtractor
-        extractor = SpectrogramExtractor(self.max_speakers, get_training("TIMIT"), valid_speakers)
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("TIMIT"), valid_speakers, "_RIFF\.WAV$")
 
         # Extract the spectrogram's, speaker numbers and speaker names
         return extractor.extract_speaker_data(x, y)
