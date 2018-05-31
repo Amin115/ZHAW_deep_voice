@@ -38,9 +38,6 @@ class LSTMController(NetworkController):
                                                     training_data="speakers_rt09_speaker_diarization_cluster",
                                                     checkpoint_name=get_experiment_nets(best_checkpoint_file[0]),
                                                     n_classes=50)
-
-            #bilstm_2layer_dropout(self.network_file, 'speakers_rt09_speaker_diarization_cluster',
-            #                      n_hidden1=256, n_hidden2=256, n_classes=20, segment_size=50)
         else:
             bilstm_2layer_dropout(self.network_file, 'speakers_100_50w_50m_not_reynolds_cluster',
                                   n_hidden1=256, n_hidden2=256, n_classes=100, segment_size=50)

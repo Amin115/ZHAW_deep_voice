@@ -89,14 +89,18 @@ class Speaker:
                          dtype=np.float32)
             y = np.zeros(self.max_speakers * self.sentences, dtype=np.int32)
 
-            self.extract_voxceleb(x, y)
+            return self.extract_voxceleb(x, y)
         else:
             raise ValueError("self.dataset can currently only be 'timit, 'rt09' or 'voxceleb', was " + self.dataset + ".")
 
     def extract_voxceleb(self, x, y):
+        valid_speakers = []
+        with open(get_speaker_list(self.speaker_list), 'r') as f:
+            valid_speakers.extend(map(lambda line: line.rstrip(), f.readlines()))
+
         # Prepare SpectrogramExtractor
-        extractor = SpectrogramExtractor(self.max_speakers, get_training("VoxCelebV1"), [], "_\d{7}\.wav$",
-                                         self.max_audio_length)
+        extractor = SpectrogramExtractor(self.max_speakers, get_training("VoxCelebV1"), valid_speakers,
+                                         "_\d{7}\.wav$", self.max_audio_length)
 
         # Extract the spectrogram's, speaker numbers and speaker names
         return extractor.extract_speaker_data_n(x, y, self.sentences)
