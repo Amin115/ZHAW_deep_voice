@@ -19,7 +19,7 @@ common/data/training/RT09/TRAIN/*
 
 #################### VoxCeleb ####################
 common/data/training/VoxCelebV1/TRAIN/*
-common/data/training/VoxCelebV1/TRAIN/.gitkeep
+!common/data/training/VoxCelebV1/TRAIN/.gitkeep
 
 common/data/training/speaker_pickles/*
 !common/data/training/speaker_pickles/.gitkeep
